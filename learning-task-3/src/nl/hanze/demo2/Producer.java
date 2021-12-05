@@ -48,7 +48,7 @@ public class Producer {
     private void sendPerson() throws JMSException {
         Person p = new Person("Erk", "ERPI", "erk@gmail.com", 24);
         XStream xstream = new XStream();
-        // xstream.alias("Person", Person.class);
+        xstream.alias("Person", Person.class);
         String xml = xstream.toXML(p);
         sendTextMessage(xml);
     }

@@ -26,7 +26,7 @@ public class Consumer {
     private static String url = ActiveMQConnection.DEFAULT_BROKER_URL;
 
     // Name of the queue we will receive messages from
-    private static String subject = "TESTQUEUE1";
+    private static String subject = "TESTQUEUE2";
 
     private Connection connection;
     private Session session;
