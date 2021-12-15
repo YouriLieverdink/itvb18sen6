@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="f4135dbd-4269-4306-a9fc-0eafaba6c5e0" >
+		 <jms:active-mq-connection >
+   <jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+  </jms:active-mq-connection>
+	</jms:config>
+	<flow name="exercise1Flow" doc:id="e0ff9188-dceb-4acf-86fc-a21f079126e3" >
+		<jms:listener doc:name="On New Message" doc:id="013e2ada-9745-4f3a-91fb-64f63bafa739" config-ref="JMS_Config" destination="bus_berichten" inboundContentType="application/xml">
+			<jms:consumer-type >
+				<jms:queue-consumer />
+			</jms:consumer-type>
+		</jms:listener>
+		<foreach doc:name="For Each" doc:id="bac0c928-ed6b-4350-a8eb-93be887687e2" collection="#[payload.Bericht.ETAs]">
+			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	info: {&#10;		tijd: vars.rootMessage.payload.Bericht.tijd,&#10;		aankomsttijd: payload.ETA.aankomsttijd,&#10;		lijnNaam: vars.rootMessage.payload.Bericht.lijnNaam,&#10;		busID: vars.rootMessage.payload.Bericht.busID,&#10;		bedrijf: vars.rootMessage.payload.Bericht.bedrijf,&#10;		eindpunt: vars.rootMessage.payload.Bericht.eindpunt&#10;	},&#10;	halteNaam: payload.ETA.halteNaam,&#10;	richting: payload.ETA.richting&#10;}]" doc:name="Set Variable" doc:id="b2d804c6-e02b-47b1-90ba-b2f9861e52c2" variableName="bordBericht"/>
+			<jms:publish doc:name="Publish" doc:id="a8d8b5a7-1423-4bfd-9c37-e61d08f63b81" config-ref="JMS_Config" destinationType="TOPIC" destination="#[vars.bordBericht.halteNaam ++ (vars.bordBericht.richting as String)]">
+				<jms:message>
+					<jms:body ><![CDATA[#[vars.bordBericht.info]]]></jms:body>
+				</jms:message>
+			</jms:publish>
+		</foreach>
+	</flow>
+</mule>
+
