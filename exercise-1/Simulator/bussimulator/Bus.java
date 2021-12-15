@@ -99,10 +99,20 @@ public class Bus{
 		sendBericht(bericht);
 	}
 
-	public void sendBericht(Bericht bericht){
+	public void sendBericht(Bericht bericht) {
+		XStream xstream = new XStream();
+		
+		xstream.alias("Bericht", Bericht.class);
+		xstream.alias("ETA", ETA.class);
+		
+		String xml = xstream.toXML(bericht);
+		
+		Producer producer = new Producer();
+		producer.sendBericht(xml);
+		
 		//TODO gebruik XStream om het binnengekomen bericht om te zetten 
 		//     naar een XML bestand (String)
-    	XStream xstream = new XStream();
+//    	XStream xstream = new XStream();
     	//TODO zorg er voor dat de XML-tags niet het volledige pad van de 
     	//     omgezettte klassen bevat
 //    	xstream.alias(?????);
