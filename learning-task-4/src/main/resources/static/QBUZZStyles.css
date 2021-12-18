@@ -1,0 +1,19 @@
+.button {
+	background-color: lightgray;
+	border: 2px solid black;
+	border-radius: 5px;
+	padding: 5pt;
+	width: 300px;
+}
+button {
+	background-color: lightgray;
+	border: 2px solid black;
+	border-radius: 5px;
+	padding: 5px;
+	width: 200px;
+}
+span#meta { position:fixed; right:40vw; top:10vw;  width: 25vw; height:70vh; }
+
+td { padding: 3pt;
+	border-radius: 5px;
+	border: 2px solid black;}

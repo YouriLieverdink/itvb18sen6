@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="/QBUZZStyles.css">
+<title>Startpagina QBUZZ info-site</title>
+</head>
+<body>
+	<h1>Voortgang van de Bussen:</h1>
+	<table>
+		<span th:each="result : ${results}">
+			<tr>
+				<td><b>Bus met ID: <span th:text="${result.busID}" /> </b></td>
+			</tr>
+		<tr>
+			<td>Bus <span th:text="${result.busID}" /> die lijn <span
+				th:text="${result.lijn}" /> rijdt in de richting <span
+				th:text="${result.eindpunt}" /> <br/> is bij of voorbij halte <span
+				th:text="${result.halte}" /></td>
+		</tr>
+		</span>
+	</table>
+	<span id = "meta">
+	<button><a href="http://localhost:8080/QBUZZ_Info/halteInfo">Halte Info</a></button><br/><br/>
+	<button><a href="http://localhost:8080/QBUZZ_Info/bussenInfo">Refresh</a></button><br/><br/>
+	<button><a href="http://localhost:8080/QBUZZ_Info/aangekomen">Aangekomen Bussen</a></button><br/><br/>
+	<button><a href="http://localhost:8080/QBUZZ_Info">Terug</a></button></span>
+</body>
+</html>

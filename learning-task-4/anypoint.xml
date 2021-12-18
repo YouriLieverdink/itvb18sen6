@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="f4135dbd-4269-4306-a9fc-0eafaba6c5e0" >
+		 <jms:active-mq-connection >
+   <jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+  </jms:active-mq-connection>
+	</jms:config>
+	<wsc:config name="Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="80f610ca-5ba9-408a-bb53-92351b860bab" >
+		<wsc:connection wsdlLocation="http://localhost:8888/QBUZZServices?wsdl" service="QbuzzServicesService" port="QbuzzServicesPort" address="http://localhost:8888/QBUZZServices" >
+			<wsc:web-service-security actor="http://schemas.xmlsoap.org/soap/actor/next" />
+		</wsc:connection>
+	</wsc:config>
+	<flow name="learningtaskfourFlow" doc:id="e0ff9188-dceb-4acf-86fc-a21f079126e3" >
+		<jms:listener doc:name="On New Message" doc:id="013e2ada-9745-4f3a-91fb-64f63bafa739" config-ref="JMS_Config" destination="bus_berichten" inboundContentType="application/xml">
+			<jms:consumer-type >
+				<jms:queue-consumer />
+			</jms:consumer-type>
+		</jms:listener>
+		<foreach doc:name="For Each" doc:id="bac0c928-ed6b-4350-a8eb-93be887687e2" collection="#[payload.Bericht.ETAs]">
+			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	info: {&#10;		tijd: vars.rootMessage.payload.Bericht.tijd,&#10;		aankomsttijd: payload.ETA.aankomsttijd,&#10;		lijnNaam: vars.rootMessage.payload.Bericht.lijnNaam,&#10;		busID: vars.rootMessage.payload.Bericht.busID,&#10;		bedrijf: vars.rootMessage.payload.Bericht.bedrijf,&#10;		eindpunt: vars.rootMessage.payload.Bericht.eindpunt&#10;	},&#10;	halteNaam: payload.ETA.halteNaam,&#10;	richting: payload.ETA.richting&#10;}]" doc:name="Set Variable" doc:id="b2d804c6-e02b-47b1-90ba-b2f9861e52c2" variableName="bordBericht"/>
+			<async doc:name="Async" doc:id="7a97662d-885f-4f8b-94d2-df33e792ccc0" >
+				<choice doc:name="Choice" doc:id="78657d78-6a59-4d18-81b6-a36e6797119d">
+				<when expression='#[vars.bordBericht.info.bedrijf == "QBUZZ" and vars.bordBericht.info.aankomsttijd ~= "0" and vars.bordBericht.info.eindpunt != vars.bordBericht.halteNaam]' >
+						<ee:transform doc:name="Transform Message" doc:id="9066ea67-397c-4bee-9a09-ac7e877ea7a0" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://soapserver.qbuzz.com/
+---
+{
+	ns0#receiveBusBijHalte: {
+		haltebericht: {
+			busID: vars.bordBericht.info.busID,
+			lijn: vars.bordBericht.info.lijnNaam,
+			halte: vars.bordBericht.halteNaam,
+			tijd: vars.bordBericht.info.tijd,
+			eindpunt: vars.bordBericht.info.eindpunt
+		}
+	}
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<wsc:consume operation="receiveBusBijHalte" doc:name="Consume" doc:id="07ef89bc-05f2-4697-ad3c-1dca9a7fb91c" config-ref="Web_Service_Consumer_Config" target="consumeResponse"/>
+					</when>
+			</choice>
+			</async>
+			<jms:publish doc:name="Publish" doc:id="a8d8b5a7-1423-4bfd-9c37-e61d08f63b81" config-ref="JMS_Config" destinationType="TOPIC" destination="#[vars.bordBericht.halteNaam ++ (vars.bordBericht.richting as String)]">
+				<jms:message>
+					<jms:body ><![CDATA[#[vars.bordBericht.info]]]></jms:body>
+				</jms:message>
+			</jms:publish>
+		</foreach>
+	</flow>
+</mule>
+
