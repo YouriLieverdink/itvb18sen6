@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="9bba5175-82d9-4965-902a-c6db1e8116e7" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="2751b59f-9b52-4d77-898d-c13ec987b725" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="l0a3Ta$qjfU0?X6X22D5" database="eaileertaak" />
+	</db:config>
+	<flow name="learningtaskfiveFlow" doc:id="fd89a0b0-ed6a-4fe2-b62a-254bc6869b55" >
+		<http:listener doc:name="Listener" doc:id="7535e082-63fd-43e4-a0eb-21148a4b52a7" config-ref="HTTP_Listener_config" path="databasegroet"/>
+		<set-variable value="#[attributes.queryParams.naam]" doc:name="Set Variable" doc:id="27130b10-a6e0-4f04-9393-9d0a76432756" variableName="naam"/>
+		<db:query-single doc:name="Query single" doc:id="cec20497-3eeb-4fc0-8b87-4bee120239b0" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT groet FROM groetformaat WHERE groetstijl = :groetType]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'groetType' : attributes.queryParams.groetType}]]]></db:input-parameters>
+		</db:query-single>
+		<choice doc:name="Choice" doc:id="b0897d76-0f6b-485f-aa82-e42183bec66e" >
+			<when expression="#[payload.groet == null]">
+				<set-payload value='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"error": "groet not found"&#10;}]' doc:name="Set Payload" doc:id="7bf2b928-4bd3-4284-9d22-78fd9b6c50d7" />
+			</when>
+			<otherwise >
+				<set-payload value='#[(payload.groet as String) ++ ", " ++ (vars.naam as String)]' doc:name="Set Payload" doc:id="a7151b7f-b17d-422b-b7fd-fde79ea91e6a" />
+				<db:insert doc:name="Insert" doc:id="238453ce-ce1c-4029-8cbd-ae23005f8c0b" config-ref="Database_Config" target="response">
+					<db:sql ><![CDATA[INSERT INTO verzondengroeten (verzondenGroeten) VALUES (:payload)]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{ 'payload': payload }]]]></db:input-parameters>
+				</db:insert>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>
+
