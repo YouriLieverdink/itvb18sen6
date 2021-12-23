@@ -115,46 +115,46 @@ public class Runner implements Runnable {
 		return Collections.min(busStart.keySet());
 	}
 
-	@Override
-	public void run() {
-		int tijd=0;
-		int volgende = initBussen();
-		while ((volgende>=0) || !actieveBussen.isEmpty()) {
-			System.out.println("De tijd is:" + tijd);
-			volgende = (tijd==volgende) ? startBussen(tijd) : volgende;
-			moveBussen(tijd);
-			sendETAs(tijd);
-			try {
-				Thread.sleep(interval);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			tijd++;
-		}
-	}
-//	Om de tijdsynchronisatie te gebruiken moet de onderstaande run() gebruikt worden
-//
 //	@Override
 //	public void run() {
 //		int tijd=0;
-//		int counter=0;
-//		TijdFuncties tijdFuncties = new TijdFuncties();
-//		tijdFuncties.initSimulatorTijden(interval,syncInterval);
 //		int volgende = initBussen();
 //		while ((volgende>=0) || !actieveBussen.isEmpty()) {
-//			counter=tijdFuncties.getCounter();
-//			tijd=tijdFuncties.getTijdCounter();
-//			System.out.println("De tijd is:" + tijdFuncties.getSimulatorWeergaveTijd());
-//			volgende = (counter==volgende) ? startBussen(counter) : volgende;
+//			System.out.println("De tijd is:" + tijd);
+//			volgende = (tijd==volgende) ? startBussen(tijd) : volgende;
 //			moveBussen(tijd);
 //			sendETAs(tijd);
 //			try {
-//				tijdFuncties.simulatorStep();
+//				Thread.sleep(interval);
 //			} catch (InterruptedException e) {
 //				// TODO Auto-generated catch block
 //				e.printStackTrace();
 //			}
+//			tijd++;
 //		}
 //	}
+//	Om de tijdsynchronisatie te gebruiken moet de onderstaande run() gebruikt worden
+//
+	@Override
+	public void run() {
+		int tijd=0;
+		int counter=0;
+		TijdFuncties tijdFuncties = new TijdFuncties();
+		tijdFuncties.initSimulatorTijden(interval,syncInterval);
+		int volgende = initBussen();
+		while ((volgende>=0) || !actieveBussen.isEmpty()) {
+			counter=tijdFuncties.getCounter();
+			tijd=tijdFuncties.getTijdCounter();
+			System.out.println("De tijd is:" + tijdFuncties.getSimulatorWeergaveTijd());
+			volgende = (counter==volgende) ? startBussen(counter) : volgende;
+			moveBussen(tijd);
+			sendETAs(tijd);
+			try {
+				tijdFuncties.simulatorStep();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
 }

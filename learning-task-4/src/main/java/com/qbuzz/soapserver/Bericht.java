@@ -19,4 +19,5 @@ public class Bericht {
 		this.ETAs=new ArrayList<ETA>();
 	}
 
+	Bericht() {}
 }

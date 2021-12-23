@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="f4135dbd-4269-4306-a9fc-0eafaba6c5e0" >
+		 <jms:active-mq-connection >
+   <jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+  </jms:active-mq-connection>
+	</jms:config>
+	<wsc:config name="QbuzzServices" doc:name="Web Service Consumer Config" doc:id="80f610ca-5ba9-408a-bb53-92351b860bab" >
+		<wsc:connection wsdlLocation="http://localhost:8888/QBUZZServices?wsdl" service="QbuzzServicesService" port="QbuzzServicesPort" address="http://localhost:8888/QBUZZServices" >
+			<wsc:web-service-security actor="http://schemas.xmlsoap.org/soap/actor/next" />
+		</wsc:connection>
+	</wsc:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="29423c2e-ec68-47ce-8a7d-3a290be7e4f4">
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="22338b8b-8d54-48b4-93b5-ea2d486beb78">
+		<http:request-connection host="localhost" port="5002" />
+	</http:request-config>
+	<vm:config name="VM_Config" doc:name="VM Config" doc:id="bd8cf706-0191-45a5-92e7-3b3769046744" >
+		<vm:queues >
+			<vm:queue queueName="logging" />
+		</vm:queues>
+	</vm:config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="e3e764a1-fb5a-4ff6-8b53-8246cfaced78" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="l0a3Ta$qjfU0?X6X22D5" database="buslogging" />
+	</db:config>
+	<flow name="handleSimulator" doc:id="e0ff9188-dceb-4acf-86fc-a21f079126e3" >
+		<jms:listener doc:name="Receive message from simulator" doc:id="013e2ada-9745-4f3a-91fb-64f63bafa739" config-ref="JMS_Config" destination="bus_berichten" inboundContentType="application/xml">
+			<jms:consumer-type >
+				<jms:queue-consumer />
+			</jms:consumer-type>
+		</jms:listener>
+		<foreach doc:name="For Each" doc:id="bac0c928-ed6b-4350-a8eb-93be887687e2" collection="#[payload.Bericht.ETAs]">
+			<set-variable value="#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	info: {&#10;		tijd: vars.rootMessage.payload.Bericht.tijd,&#10;		aankomsttijd: payload.ETA.aankomsttijd,&#10;		lijnNaam: vars.rootMessage.payload.Bericht.lijnNaam,&#10;		busID: vars.rootMessage.payload.Bericht.busID,&#10;		bedrijf: vars.rootMessage.payload.Bericht.bedrijf,&#10;		eindpunt: vars.rootMessage.payload.Bericht.eindpunt&#10;	},&#10;	halteNaam: payload.ETA.halteNaam,&#10;	richting: payload.ETA.richting&#10;}]" doc:name="Define 'bordBericht'" doc:id="b2d804c6-e02b-47b1-90ba-b2f9861e52c2" variableName="bordBericht"/>
+			<async doc:name="Async" doc:id="7a97662d-885f-4f8b-94d2-df33e792ccc0" >
+				<choice doc:name="Check type of message" doc:id="78657d78-6a59-4d18-81b6-a36e6797119d">
+				<when expression='#[vars.bordBericht.info.bedrijf == "QBUZZ" and vars.bordBericht.info.aankomsttijd ~= "0" and vars.bordBericht.info.eindpunt != vars.bordBericht.halteNaam]' >
+						<ee:transform doc:name="Transform Message" doc:id="9066ea67-397c-4bee-9a09-ac7e877ea7a0" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://soapserver.qbuzz.com/
+---
+{
+	ns0#receiveBusBijHalte: {
+		haltebericht: {
+			busID: vars.bordBericht.info.busID,
+			lijn: vars.bordBericht.info.lijnNaam,
+			halte: vars.bordBericht.halteNaam,
+			tijd: vars.bordBericht.info.tijd,
+			eindpunt: vars.bordBericht.info.eindpunt
+		}
+	}
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<wsc:consume operation="receiveBusBijHalte" doc:name="Reached a busstop" doc:id="07ef89bc-05f2-4697-ad3c-1dca9a7fb91c" config-ref="QbuzzServices" target="consumeResponse"/>
+					</when>
+					<when expression='#[vars.bordBericht.info.bedrijf == "QBUZZ" and vars.bordBericht.info.aankomsttijd ~= "0" and vars.bordBericht.info.eindpunt == vars.bordBericht.halteNaam]' >
+						<ee:transform doc:name="Transform Message" doc:id="37d7f674-d2a1-44ea-b318-557f0713496d" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://soapserver.qbuzz.com/
+---
+{
+	ns0#receiveBusBijEindpunt: {
+		aankomstbericht: {
+			busID: vars.bordBericht.info.busID,
+			lijn: vars.bordBericht.info.lijnNaam,
+			eindpunt: vars.bordBericht.info.eindpunt,
+			aankomsttijd: vars.bordBericht.info.tijd
+		}
+	}
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<wsc:consume operation="receiveBusBijEindpunt" doc:name="Reached destination" doc:id="34450a3e-f954-48f5-b78f-d1f40e8271d4" config-ref="QbuzzServices" target="consumeResponse"/>
+					</when>
+			</choice>
+			</async>
+			<jms:publish doc:name="Send 'bordBericht' to the infobord" doc:id="a8d8b5a7-1423-4bfd-9c37-e61d08f63b81" config-ref="JMS_Config" destinationType="TOPIC" destination="#[vars.bordBericht.halteNaam ++ (vars.bordBericht.richting as String)]">
+				<jms:message>
+					<jms:body ><![CDATA[#[vars.bordBericht.info]]]></jms:body>
+				</jms:message>
+			</jms:publish>
+		</foreach>
+		<choice doc:name="Check bus company" doc:id="69b13cba-01d2-430d-927d-1952d4e718cf">
+			<when expression='#[payload.Bericht.bedrijf == "ARRIVA"]'>
+				<jms:publish doc:name="Log Arriva eta's" doc:id="3f23b5ad-dbda-4278-b090-92909f3e92b2" config-ref="JMS_Config" destination="ARRIVALOGGER" />
+			</when>
+			<when expression='#[payload.Bericht.bedrijf == "QBUZZ"]'>
+				<ee:transform doc:name="Transform Message" doc:id="0aa0174c-627a-4bf2-8e4f-3c4843ddd2b4">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://soapserver.qbuzz.com/
+---
+{
+	ns0#logEtas: {
+		bericht: {
+			lijnNaam: payload.Bericht.lijnNaam,
+			eindpunt: payload.Bericht.eindpunt,
+			bedrijf: payload.Bericht.bedrijf,
+			busID: payload.Bericht.busID,
+			tijd: payload.Bericht.tijd,
+			ETAs: payload.Bericht.ETAs.*ETA map(item,index) -> {
+				halteNaam: item.halteNaam,
+				richting: item.richting,
+				aankomsttijd: item.aankomsttijd
+			}	
+		}
+	}
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<wsc:consume operation="logEtas" doc:name="Log Qbuzz eta's" doc:id="853aa3a1-c906-4e98-be03-c1f203109638" config-ref="QbuzzServices" />
+			</when>
+			<when expression='#[payload.Bericht.bedrijf == "FLIXBUS"]' >
+				<ee:transform doc:name="Transform Message" doc:id="76ac4544-9aaf-4a69-8d42-839cdf663df6" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"busID": payload.Bericht.busID,
+	"eindpunt": payload.Bericht.eindpunt,
+	"aankomsttijd": payload.Bericht.tijd as String,
+	"etasString": (payload.Bericht.ETAs.*ETA map(item, index) -> item.halteNaam ++ "|" ++ (item.richting as String) ++ "|" ++ (item.aankomsttijd as String)) joinBy "|"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<db:insert doc:name="Insert" doc:id="bdb124ed-0f33-43c6-bb69-5c5f05966b06" config-ref="Database_Config">
+					<db:sql ><![CDATA[INSERT INTO qbuzzlog (logrecord) VALUES (:record)]]></db:sql>
+					<db:input-parameters ><![CDATA[#[record: payload.busID ++ "|" ++ payload.eindpunt ++ "|" ++ payload.aankomsttijd ++ "|" ++ payload.etasString]]]></db:input-parameters>
+				</db:insert>
+			</when>
+		</choice>
+	</flow>
+	<flow name="handleTimeSync" doc:id="5cedecf4-7180-49c1-89ba-94bf1fc6517f">
+		<http:listener doc:name="Listener" doc:id="a0fa8a2d-42eb-422c-9906-b6a7dc32e96a" config-ref="HTTP_Listener_config" path="TijdServer" />
+		<set-variable value="#[attributes.queryParams.responseType]" doc:name="Save response type" doc:id="e61630c8-d303-4ce9-92c5-be9fec98cacd" variableName="responseType" />
+		<http:request method="GET" doc:name="Call python timeserver" doc:id="85d09247-63bb-46ea-b483-fcaba499e263" config-ref="HTTP_Request_configuration" path="/TimeServer" />
+		<choice doc:name="Decide output format" doc:id="a5025573-4f9c-4474-a728-82c261d46bb6">
+			<when expression='#[vars.responseType == "xml"]'>
+				<ee:transform doc:name="Transform Message" doc:id="8b742048-b17b-4248-9a0c-b6edb16c9dd9">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+---
+{
+	Tijd: {
+		uur: payload.uur,
+		minuut: payload.minuut,
+		seconde: payload.seconde
+	}
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+		</choice>
+	</flow>
+</mule>
+

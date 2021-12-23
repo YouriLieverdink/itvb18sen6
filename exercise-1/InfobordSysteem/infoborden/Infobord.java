@@ -33,9 +33,9 @@ public class Infobord extends Application{
 		if (berichten.hetBordMoetVerverst()) {
 			String[] infoTekstRegels = berichten.repaintInfoBordValues();
 //			Deze code hoort bij opdracht 3
-//			InfobordTijdFuncties tijdfuncties = new InfobordTijdFuncties();
-//			String tijd = tijdfuncties.getCentralTime().toString();
-//			tijdRegel.setText(tijd);
+			InfobordTijdFuncties tijdfuncties = new InfobordTijdFuncties();
+			String tijd = tijdfuncties.getCentralTime().toString();
+			tijdRegel.setText(tijd);
 			infoRegel1.setText(infoTekstRegels[0]);
 			infoRegel2.setText(infoTekstRegels[1]);
 			infoRegel3.setText(infoTekstRegels[2]);

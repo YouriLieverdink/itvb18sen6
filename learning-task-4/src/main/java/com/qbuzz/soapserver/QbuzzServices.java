@@ -18,8 +18,8 @@ public class QbuzzServices {
 	}
 	
 	@WebMethod
-	public int logEtas(@WebParam(name = "etaBericht") Bericht etaBericht) {
-		ETAPersistence.addBericht(etaBericht);
+	public int logEtas(@WebParam(name = "bericht") Bericht bericht) {
+		ETAPersistence.addBericht(bericht);
 		return ETAPersistence.getAantalBerichten();
 	}
 }
